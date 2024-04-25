@@ -8,7 +8,6 @@ const {
   CLIENT_ERROR_RESPONSE_CODE,
 } = STATUS_CODE;
 
-
 //Add the user
 const addUser = asyncHandler(async (req, res) => {
   const {username}  = req?.body;

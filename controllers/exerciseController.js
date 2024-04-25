@@ -7,7 +7,6 @@ const { checkValidFormField } = require("../middleware/validateFormField");
 const moment = require("moment");
 const { STATUS_CODE } = require("../const/httpStatusCode");
 
-
 // Adding the Exercises
 const addExercise = asyncHandler(async (req, res) => {
   const exerciseObj = {

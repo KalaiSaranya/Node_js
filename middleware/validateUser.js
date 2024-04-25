@@ -8,6 +8,7 @@ const validateUserName = async (username) => {
   return res;
 };
 
+
 const checkUserExistOrNot = async (username) => {
   const [isUserExist] = await userModel.find({ username });
   return isUserExist ? { message: "Username is already Exist" } : "";

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { validateDate } = require("../middleware/validateDate");
 const moment = require("moment");
 
+
 const exerciseSchema = mongoose.Schema(
   {
     userId: {

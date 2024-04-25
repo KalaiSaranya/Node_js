@@ -1,5 +1,6 @@
 const moment = require("moment");
 
+
 function isValidDate(query) {
   const { from, to, limit } = query;
   if (from && !moment(from, "YYYY-MM-DD", true).isValid()) {

@@ -1,14 +1,18 @@
 const asyncHandler = require("express-async-handler");
-const exercise = require("../models/exerciseModel");
+const exerciseModal = require("../models/exerciseModel");
 const user = require("../models/userModel");
 const { getUserDetail } = require("./userController");
 const { isValidDate } = require("../middleware/validateDate");
 const { checkValidFormField } = require("../middleware/validateFormField");
 const moment = require("moment");
 const { STATUS_CODE } = require("../const/httpStatusCode");
+const mongoose=require("mongoose");
 
 // Adding the Exercises
 const addExercise = asyncHandler(async (req, res) => {
+  const errMsg={
+    message:" User does not exits"
+  }
   const exerciseObj = {
     ...req.body,
     userId: req.params._id,
@@ -16,11 +20,17 @@ const addExercise = asyncHandler(async (req, res) => {
   };
   const isValidForm = checkValidFormField(exerciseObj);
   if (Object.entries(isValidForm).length === 0) {
-    const { username } = await user.findById(req.params._id);
-    let { userId, description, duration, date } = await exercise.create(
-      exerciseObj
-    );
-    res.json({ _id: userId, username, description, duration, date });
+    const userDetails = await user.findById(req.params._id);
+    if (!userDetails) {
+      res
+        .status(STATUS_CODE.CLIENT_ERROR_RESPONSE_CODE)
+        .json(errMsg);
+    } else {
+      let { userId, description, duration, date } = await exerciseModal.create(
+        exerciseObj
+      );
+      res.json({ _id: userId, username, description, duration, date });
+    }
   } else {
     res.status(STATUS_CODE.CLIENT_ERROR_RESPONSE_CODE).json(isValidForm);
   }
@@ -31,8 +41,9 @@ const getExercises = asyncHandler(async (req, res) => {
   const { _id, username } = await getUserDetail(req.params._id);
   let resultArr = await getUserExercises(_id);
   if (req?.query?.from) {
-    resultArr = getLimitedExercises(resultArr.exercises, req.query);
+    resultArr = await getLimitedExercises(req.query,_id);
   }
+  console.log("resultArr,",resultArr);
   const { exercises, count } = resultArr;
   const result = {
     _id,
@@ -45,37 +56,37 @@ const getExercises = asyncHandler(async (req, res) => {
 });
 
 //Getting Exercises of the Respective user
-const getUserExercises = asyncHandler(async (id) => {
-  const result = await exercise.find({ userId: id }).sort({ date: 1});
-  const filteredExercise = result.map((obj) => {
-    const { _id, description, duration, date } = obj;
-    return { _id, description, duration, date };
-  });
-  const count = filteredExercise.length;
-  console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&",count)
-  return { exercises: filteredExercise, count };
-});
 
-//Getting Exercises of The Respective user with some limited exercises
-const getLimitedExercises = (inputExercise, query) => {
-  const isValidDateformat = isValidDate(query);
-  if (!isValidDateformat) {
+const getUserExercises = async (id) => {
+  const exercises = await exerciseModal.find({ userId: id }).sort({ date: 1 });
+  const count = exercises.length;
+  return { exercises, count };
+};
+
+const getLimitedExercises = async ( query, id) => {
+  try {
     const { from, to, limit } = query;
-    let startDate = from ? new Date(from) : null;
-    let endDate = to ? new Date(to) : null;
-    if (endDate) {
-      // Set end date to the end of the day
-      endDate.setHours(23, 59, 59, 999);
+
+    let filter = { userId: id };
+
+    if (from && isValidDate(from)) {
+      filter.date = { $gte: new Date(from) };
     }
 
-    const results = inputExercise?.filter(
-      (exercise) => exercise.date >= startDate && exercise.date <= endDate
-    );
-    const limitedExercise = limit ? results.slice(0, limit) : results;
-    const count = results.length;
-    return { exercises: limitedExercise, count };
+    if (to && isValidDate(to)) {
+      filter.date = { ...filter.date, $lte: new Date(to) };
+    }
+
+    const exercises = await exerciseModal.find(filter).sort({ date: 1 }).limit(limit);
+    const count = await exerciseModal.countDocuments(filter);
+    console.log(exercises,count)
+
+    return { exercises, count };
+  } catch (error) {
+    console.error("Error retrieving exercises:", error);
   }
 };
+
 
 module.exports = {
   addExercise,
